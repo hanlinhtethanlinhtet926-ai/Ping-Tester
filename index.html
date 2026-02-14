@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Ping Checker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            background: radial-gradient(circle at top left, #1a1a2e, #16213e);
+            color: #ffffff;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+        }
+        .status-dot {
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pulsing { animation: pulse 1.5s infinite; }
+
+        .quality-badge {
+            transition: all 0.3s ease;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight">Ping<span class="text-blue-500">Master</span></h1>
+                <p class="text-slate-400">Real-time HTTP latency and stability monitor</p>
+            </div>
+            <div id="connectionStatus" class="glass-panel px-4 py-2 flex items-center gap-2">
+                <span id="dot" class="status-dot bg-blue-500"></span>
+                <span id="statusText" class="text-sm font-medium">System Ready</span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Sidebar: Controls -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="glass-panel p-6">
+                    <h2 class="text-lg font-semibold mb-4 text-blue-400">Configuration</h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs uppercase text-slate-500 font-bold mb-1">Target URL</label>
+                            <input type="text" id="targetUrl" value="https://www.google.com" 
+                                class="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <p class="text-[10px] text-slate-500 mt-1">*Note: Target must allow CORS or be a public asset.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs uppercase text-slate-500 font-bold mb-1">Interval (ms)</label>
+                            <select id="interval" class="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-sm">
+                                <option value="500">Fast (500ms)</option>
+                                <option value="1000" selected>Normal (1s)</option>
+                                <option value="3000">Slow (3s)</option>
+                            </select>
+                        </div>
+
+                        <div class="pt-2">
+                            <button id="startBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-md transition-all">
+                                START TESTING
+                            </button>
+                            <button id="stopBtn" class="hidden w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-md transition-all">
+                                STOP TESTING
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6">
+                    <h2 class="text-lg font-semibold mb-4 text-blue-400">Presets</h2>
+                    <div class="grid grid-cols-1 gap-2">
+                        <button onclick="setTarget('https://www.google.com')" class="text-left text-sm p-2 hover:bg-white/5 rounded transition">Google (Search)</button>
+                        <button onclick="setTarget('https://www.cloudflare.com')" class="text-left text-sm p-2 hover:bg-white/5 rounded transition">Cloudflare (CDN)</button>
+                        <button onclick="setTarget('https://github.com')" class="text-left text-sm p-2 hover:bg-white/5 rounded transition">GitHub (Dev)</button>
+                        <button onclick="setTarget('https://1.1.1.1')" class="text-left text-sm p-2 hover:bg-white/5 rounded transition">Cloudflare DNS</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content: Graph & Stats -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Stats Row -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="glass-panel p-4 text-center relative overflow-hidden">
+                        <p class="text-xs text-slate-400 uppercase">Current</p>
+                        <p id="curPing" class="text-2xl font-bold">-- ms</p>
+                        <div class="mt-1 h-4">
+                            <span id="qualityBadge" class="quality-badge hidden">Good</span>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-4 text-center">
+                        <p class="text-xs text-slate-400 uppercase">Average</p>
+                        <p id="avgPing" class="text-2xl font-bold">-- ms</p>
+                    </div>
+                    <div class="glass-panel p-4 text-center">
+                        <p class="text-xs text-slate-400 uppercase">Min</p>
+                        <p id="minPing" class="text-2xl font-bold">-- ms</p>
+                    </div>
+                    <div class="glass-panel p-4 text-center">
+                        <p class="text-xs text-slate-400 uppercase">Max</p>
+                        <p id="maxPing" class="text-2xl font-bold">-- ms</p>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="glass-panel p-6 h-[400px]">
+                    <canvas id="pingChart"></canvas>
+                </div>
+
+                <!-- Log -->
+                <div class="glass-panel p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-sm font-bold uppercase text-slate-500">Live Log</h3>
+                        <button onclick="clearLog()" class="text-[10px] text-blue-400 hover:underline">CLEAR</button>
+                    </div>
+                    <div id="logBox" class="h-32 overflow-y-auto text-xs font-mono space-y-1 bg-black/20 p-2 rounded">
+                        <div class="text-slate-500">Waiting for start...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global State
+        let pingInterval = null;
+        let chart = null;
+        let pingHistory = [];
+        const maxHistory = 30;
+
+        // Initialize Chart
+        function initChart() {
+            const ctx = document.getElementById('pingChart');
+            if (!ctx) return;
+            
+            chart = new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: Array(maxHistory).fill(''),
+                    datasets: [{
+                        label: 'Latency (ms)',
+                        data: Array(maxHistory).fill(null),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: 'rgba(255,255,255,0.5)' }
+                        },
+                        x: { display: false }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        async function measurePing() {
+            const urlInput = document.getElementById('targetUrl');
+            if (!urlInput) return;
+            
+            const url = urlInput.value;
+            const start = performance.now();
+            
+            try {
+                // Using 'no-store' to ensure we get a fresh network request
+                await fetch(url, { 
+                    mode: 'no-cors', 
+                    cache: 'no-store',
+                    credentials: 'omit'
+                });
+                const end = performance.now();
+                const duration = Math.round(end - start);
+                updateStats(duration);
+                log(`Connected: ${duration}ms`, 'success');
+            } catch (err) {
+                log(`Fail: ${err.message}`, 'error');
+                updateStats(null);
+            }
+        }
+
+        function updateStats(latency) {
+            const curEl = document.getElementById('curPing');
+            const dot = document.getElementById('dot');
+            const badge = document.getElementById('qualityBadge');
+            
+            if (!curEl || !dot || !badge) return;
+
+            if (latency === null) {
+                curEl.innerText = "Error";
+                curEl.className = "text-2xl font-bold text-red-500";
+                dot.className = "status-dot bg-red-500 pulsing";
+                badge.classList.add('hidden');
+                pingHistory.push(null);
+            } else {
+                curEl.innerText = latency + " ms";
+                badge.classList.remove('hidden');
+                
+                // Quality Grade Logic
+                let label = "";
+                let colorClass = "";
+                let badgeClass = "";
+
+                if (latency < 50) {
+                    label = "Better";
+                    colorClass = "text-emerald-400";
+                    badgeClass = "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50";
+                } else if (latency < 150) {
+                    label = "Good";
+                    colorClass = "text-blue-400";
+                    badgeClass = "bg-blue-500/20 text-blue-400 border border-blue-500/50";
+                } else if (latency < 300) {
+                    label = "Poor";
+                    colorClass = "text-orange-400";
+                    badgeClass = "bg-orange-500/20 text-orange-400 border border-orange-500/50";
+                } else {
+                    label = "Bad";
+                    colorClass = "text-red-400";
+                    badgeClass = "bg-red-500/20 text-red-400 border border-red-500/50";
+                }
+
+                curEl.className = `text-2xl font-bold ${colorClass}`;
+                badge.innerText = label;
+                badge.className = `quality-badge ${badgeClass}`;
+                
+                dot.className = "status-dot bg-green-500";
+                pingHistory.push(latency);
+            }
+
+            // Keep history limited to 100 for stats
+            if (pingHistory.length > 100) pingHistory.shift();
+
+            // Calculate Aggregates
+            const validPings = pingHistory.filter(p => p !== null);
+            if (validPings.length > 0) {
+                const avg = Math.round(validPings.reduce((a, b) => a + b) / validPings.length);
+                const min = Math.min(...validPings);
+                const max = Math.max(...validPings);
+                
+                document.getElementById('avgPing').innerText = avg + " ms";
+                document.getElementById('minPing').innerText = min + " ms";
+                document.getElementById('maxPing').innerText = max + " ms";
+            }
+
+            // Update Chart Data
+            if (chart) {
+                chart.data.datasets[0].data.push(latency);
+                chart.data.datasets[0].data.shift();
+                chart.update('none'); 
+            }
+        }
+
+        function log(msg, type) {
+            const box = document.getElementById('logBox');
+            if (!box) return;
+            const entry = document.createElement('div');
+            const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            entry.className = type === 'error' ? 'text-red-400' : 'text-slate-300';
+            entry.innerHTML = `<span class="text-slate-600">[${time}]</span> ${msg}`;
+            
+            box.prepend(entry);
+            // Limit log entries
+            if (box.children.length > 50) box.removeChild(box.lastChild);
+        }
+
+        function clearLog() {
+            const box = document.getElementById('logBox');
+            if (box) box.innerHTML = '';
+        }
+
+        function setTarget(url) {
+            const input = document.getElementById('targetUrl');
+            if (input) input.value = url;
+            if (pingInterval) {
+                stopTesting();
+                startTesting();
+            }
+        }
+
+        function startTesting() {
+            const intervalSelect = document.getElementById('interval');
+            const interval = intervalSelect ? parseInt(intervalSelect.value) : 1000;
+            
+            document.getElementById('startBtn').classList.add('hidden');
+            document.getElementById('stopBtn').classList.remove('hidden');
+            document.getElementById('statusText').innerText = "Testing Active";
+            
+            measurePing();
+            pingInterval = setInterval(measurePing, interval);
+        }
+
+        function stopTesting() {
+            if (pingInterval) {
+                clearInterval(pingInterval);
+                pingInterval = null;
+            }
+            document.getElementById('startBtn').classList.remove('hidden');
+            document.getElementById('stopBtn').classList.add('hidden');
+            document.getElementById('statusText').innerText = "System Ready";
+            document.getElementById('dot').className = "status-dot bg-blue-500";
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initChart();
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            
+            if (startBtn) startBtn.addEventListener('click', startTesting);
+            if (stopBtn) stopBtn.addEventListener('click', stopTesting);
+            
+            log("Application initialized.");
+        });
+    </script>
+</body>
+</html>
