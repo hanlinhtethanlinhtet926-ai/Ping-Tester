@@ -1,27 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Primary Title -->
+    <title>PingMaster - Real-time Network Ping Checker</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="eb78cac5-8647-42ec-b447-942c338c6f26_removalai_preview.png">
+
     <!-- Basic SEO -->
-<title>PingMaster - Real-time Network Ping Checker</title>
-    <link rel="icon" href="A12.png">
-<meta name="description" content="PingMaster is a real-time HTTP latency and stability monitor. Track website response time, visualize network performance, and analyze connection quality instantly.">
-<meta name="keywords" content="ping checker, network monitor, latency test, website speed, HTTP ping">
-<meta name="author" content="Your Name">
+    <meta name="description" content="PingMaster is a real-time HTTP latency and stability monitor with live charts, analytics, and connection quality grading.">
+    <meta name="keywords" content="ping checker, network monitor, latency test, website speed, HTTP ping tool">
+    <meta name="author" content="PingMaster">
 
-<!-- Open Graph (For thumbnail when shared on Facebook, Discord, etc.) -->
-<meta property="og:title" content="PingMaster - Real-time Network Monitor">
-<meta property="og:description" content="Monitor HTTP latency with live charts, quality grading, and performance tracking.">
-<meta property="og:image" content="https://yourwebsite.com/thumbnail.jpg">
-<meta property="og:url" content="https://yourwebsite.com">
-<meta property="og:type" content="website">
+    <!-- Open Graph (For Social Sharing Later) -->
+    <meta property="og:title" content="PingMaster - Real-time Network Monitor">
+    <meta property="og:description" content="Track website latency, visualize performance, and analyze connection quality in real time.">
+    <meta property="og:type" content="website">
 
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="PingMaster - Real-time Network Monitor">
-<meta name="twitter:description" content="Track website latency and network stability in real-time.">
-<meta name="twitter:image" content="https://yourwebsite.com/thumbnail.jpg">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="PingMaster - Real-time Network Monitor">
+    <meta name="twitter:description" content="Real-time HTTP latency checker with live analytics and stability tracking.">
+
+    <!-- Styles & Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
@@ -60,12 +69,43 @@
             font-weight: 800;
             text-transform: uppercase;
         }
+
+        .fade-out {
+    opacity: 0;
+    transform: scale(0.98);
+    transition: all 0.4s ease;
+}
+
+.fade-in {
+    animation: fadeInPage 0.4s ease forwards;
+}
+
+@keyframes fadeInPage {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+}
+
     </style>
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-5xl mx-auto">
         <!-- Header -->
         <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+
+            <div class="flex items-center gap-3">
+    <!-- About Button -->
+<a href="about.html" id="aboutBtn"
+   class="bg-slate-700 hover:bg-slate-600 text-white text-sm px-4 py-2 rounded-md transition">
+    About This Tool
+</a>
+
+    <!-- Connection Status -->
+    <div id="connectionStatus" class="glass-panel px-4 py-2 flex items-center gap-2">
+        <span id="dot" class="status-dot bg-blue-500"></span>
+        <span id="statusText" class="text-sm font-medium">System Ready</span>
+    </div>
+</div>
+
             <div>
                 <h1 class="text-3xl font-bold tracking-tight">Ping<span class="text-blue-500">Master</span></h1>
                 <p class="text-slate-400">Real-time HTTP latency and stability monitor</p>
@@ -366,6 +406,26 @@
             
             log("Application initialized.");
         });
+
+        // Animated Page Transition
+const aboutBtn = document.getElementById("aboutBtn");
+
+if (aboutBtn) {
+    aboutBtn.addEventListener("click", function(e) {
+        e.preventDefault();
+        document.body.classList.add("fade-out");
+
+        setTimeout(() => {
+            window.location.href = "about.html";
+        }, 400);
+    });
+}
+
+// Fade in when page loads
+window.addEventListener("load", () => {
+    document.body.classList.add("fade-in");
+});
+
     </script>
 </body>
 </html>
